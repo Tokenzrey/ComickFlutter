@@ -24,6 +24,7 @@
 /// Registrasi dependency dilakukan dengan [GetIt], sehingga setiap store dan factory dapat
 /// diakses secara global di seluruh aplikasi tanpa perlu inisialisasi manual.
 library;
+
 import 'dart:async';
 
 import 'package:boilerplate/core/stores/error/error_store.dart'; // Store untuk penanganan error global
@@ -32,10 +33,12 @@ import 'package:boilerplate/domain/repository/setting/setting_repository.dart'; 
 import 'package:boilerplate/domain/usecase/post/get_post_usecase.dart'; // Use case untuk mengambil data post
 import 'package:boilerplate/domain/usecase/user/is_logged_in_usecase.dart'; // Use case untuk mengecek status login pengguna
 import 'package:boilerplate/domain/usecase/user/login_usecase.dart'; // Use case untuk proses login pengguna
+import 'package:boilerplate/domain/usecase/user/register_usecase.dart';
 import 'package:boilerplate/domain/usecase/user/save_login_in_status_usecase.dart'; // Use case untuk menyimpan status login pengguna
 import 'package:boilerplate/presentation/home/store/language/language_store.dart'; // Store untuk pengaturan bahasa
 import 'package:boilerplate/presentation/home/store/theme/theme_store.dart'; // Store untuk pengaturan tema
 import 'package:boilerplate/presentation/login/store/login_store.dart'; // Store untuk proses login dan autentikasi pengguna
+import 'package:boilerplate/presentation/register/store/register_store.dart'; // Store untuk proses login dan autentikasi pengguna
 import 'package:boilerplate/presentation/post/store/post_store.dart'; // Store untuk mengelola data post
 
 import '../../../di/service_locator.dart'; // Instance service locator (GetIt)
@@ -74,38 +77,33 @@ class StoreModule {
 
     // Stores:------------------------------------------------------------------
     // Registrasi UserStore untuk mengelola state dan logika autentikasi pengguna.
-    getIt.registerSingleton<UserStore>(
-      UserStore(
-        getIt<IsLoggedInUseCase>(),
-        getIt<SaveLoginStatusUseCase>(),
-        getIt<LoginUseCase>(),
-        getIt<FormErrorStore>(),
+    getIt.registerSingleton<LoginStore>(
+      LoginStore(
+        getIt<FormStore>(),
         getIt<ErrorStore>(),
+        getIt<LoginUseCase>(),
       ),
     );
-
+    getIt.registerSingleton<RegisterStore>(
+      RegisterStore(
+        getIt<FormStore>(),
+        getIt<ErrorStore>(),
+        getIt<RegisterUseCase>(),
+      ),
+    );
     // Registrasi PostStore untuk mengelola state data post dan menangani error yang terjadi.
     getIt.registerSingleton<PostStore>(
-      PostStore(
-        getIt<GetPostUseCase>(),
-        getIt<ErrorStore>(),
-      ),
+      PostStore(getIt<GetPostUseCase>(), getIt<ErrorStore>()),
     );
 
     // Registrasi ThemeStore untuk mengelola pengaturan tema aplikasi.
     getIt.registerSingleton<ThemeStore>(
-      ThemeStore(
-        getIt<SettingRepository>(),
-        getIt<ErrorStore>(),
-      ),
+      ThemeStore(getIt<SettingRepository>(), getIt<ErrorStore>()),
     );
 
     // Registrasi LanguageStore untuk mengelola pengaturan bahasa aplikasi.
     getIt.registerSingleton<LanguageStore>(
-      LanguageStore(
-        getIt<SettingRepository>(),
-        getIt<ErrorStore>(),
-      ),
+      LanguageStore(getIt<SettingRepository>(), getIt<ErrorStore>()),
     );
   }
 }

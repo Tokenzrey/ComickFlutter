@@ -24,11 +24,13 @@
 /// Registrasi dependency dilakukan menggunakan [GetIt] sebagai service locator, sehingga komponen-komponen
 /// jaringan dapat diakses secara global di seluruh aplikasi.
 library;
+
 import 'package:boilerplate/core/data/network/dio/configs/dio_configs.dart'; // Konfigurasi dasar untuk Dio
 import 'package:boilerplate/core/data/network/dio/dio_client.dart'; // Client untuk melakukan request jaringan menggunakan Dio
 import 'package:boilerplate/core/data/network/dio/interceptors/auth_interceptor.dart'; // Interceptor untuk menambahkan token otentikasi pada request
 import 'package:boilerplate/core/data/network/dio/interceptors/logging_interceptor.dart'; // Interceptor untuk mencatat log request/response
 import 'package:boilerplate/data/network/apis/posts/post_api.dart'; // API untuk mengakses endpoint post
+import 'package:boilerplate/data/network/apis/users/user_api.dart'; // API untuk mengakses endpoint post
 import 'package:boilerplate/data/network/constants/endpoints.dart'; // Konstanta untuk endpoint dan timeout koneksi
 import 'package:boilerplate/data/network/interceptors/error_interceptor.dart'; // Interceptor untuk menangani error pada request/response
 import 'package:boilerplate/data/network/rest_client.dart'; // Client untuk request RESTful
@@ -112,5 +114,6 @@ class NetworkModule {
     // API's:-------------------------------------------------------------------
     // Mendaftarkan instance PostApi yang menggunakan DioClient dan RestClient untuk mengakses endpoint post.
     getIt.registerSingleton(PostApi(getIt<DioClient>(), getIt<RestClient>()));
+    getIt.registerSingleton(UserApi(getIt<DioClient>(), getIt<RestClient>()));
   }
 }

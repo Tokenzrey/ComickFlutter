@@ -9,10 +9,10 @@ part 'login_usecase.g.dart';
 
 @JsonSerializable()
 class LoginParams {
-  final String username;
+  final String email;
   final String password;
 
-  LoginParams({required this.username, required this.password});
+  LoginParams({required this.email, required this.password});
 
   factory LoginParams.fromJson(Map<String, dynamic> json) =>
       _$LoginParamsFromJson(json);

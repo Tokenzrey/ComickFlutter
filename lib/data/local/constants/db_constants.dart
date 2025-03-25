@@ -5,6 +5,7 @@ class DBConstants {
 
   // Store Name
   static const String STORE_NAME = 'demo';
+  static const String USER_STORE_NAME = 'users';
 
   // DB Name
   static const DB_NAME = 'demo.db';

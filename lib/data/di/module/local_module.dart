@@ -20,11 +20,13 @@
 /// Registrasi dependency dilakukan dengan bantuan [GetIt] sebagai service locator, sehingga setiap layanan dapat
 /// diakses secara global di seluruh aplikasi.
 library;
+
 import 'dart:async';
 
 import 'package:boilerplate/core/data/local/sembast/sembast_client.dart'; // Koneksi dan inisialisasi database lokal dengan Sembast
 import 'package:boilerplate/data/local/constants/db_constants.dart'; // Konstanta nama database dan konfigurasi lainnya
 import 'package:boilerplate/data/local/datasources/post/post_datasource.dart'; // Data source untuk akses data post
+import 'package:boilerplate/data/local/datasources/user/user_datasource.dart'; // Data source untuk akses data post
 import 'package:boilerplate/data/sharedpref/shared_preference_helper.dart'; // Helper untuk mempermudah akses shared preferences
 import 'package:flutter/foundation.dart'; // Digunakan untuk mengecek platform (misalnya kIsWeb)
 import 'package:path_provider/path_provider.dart'; // Untuk mendapatkan path penyimpanan dokumen pada perangkat mobile
@@ -70,9 +72,10 @@ class LocalModule {
     getIt.registerSingletonAsync<SembastClient>(
       () async => SembastClient.provideDatabase(
         databaseName: DBConstants.DB_NAME,
-        databasePath: kIsWeb
-            ? "/assets/db"
-            : (await getApplicationDocumentsDirectory()).path,
+        databasePath:
+            kIsWeb
+                ? "/assets/db"
+                : (await getApplicationDocumentsDirectory()).path,
       ),
     );
 
@@ -80,6 +83,9 @@ class LocalModule {
     // Registrasi PostDataSource yang membutuhkan instance SembastClient.
     getIt.registerSingleton(
       PostDataSource(await getIt.getAsync<SembastClient>()),
+    );
+    getIt.registerSingleton(
+      UserDataSource(await getIt.getAsync<SembastClient>()),
     );
   }
 }

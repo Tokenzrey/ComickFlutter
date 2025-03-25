@@ -24,6 +24,7 @@ dependencies:
   # B
   # C
   cupertino_icons: ^1.0.5
+  crypto: ^3.0.2
   # D
   dio: ^5.1.1
   # E
@@ -40,6 +41,7 @@ dependencies:
   intl: ^0.19.0
   # J
   json_serializable: ^6.6.1
+  jwt_decoder: ^2.0.1
   # K
   # L
   # M
@@ -56,6 +58,7 @@ dependencies:
   sembast: ^3.4.4
   # T
   # U
+  uuid: ^3.0.7
   # V
   validators: ^3.0.0
   # W

@@ -33,6 +33,12 @@ Future<void> main() async {
   await ServiceLocator.configureDependencies();
 
   // Jalankan aplikasi dengan widget utama [MyApp].
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    return Material(
+      child: Center(child: Text('Terjadi error: ${details.exception}')),
+    );
+  };
+
   runApp(MyApp());
 }
 

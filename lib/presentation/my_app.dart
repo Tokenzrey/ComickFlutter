@@ -27,6 +27,7 @@ import 'package:boilerplate/presentation/login/login.dart'; // Halaman LoginScre
 import 'package:boilerplate/presentation/login/store/login_store.dart'; // Store untuk proses login (jika diperlukan)
 import 'package:boilerplate/utils/locale/app_localization.dart'; // Konfigurasi lokal dan penerjemahan
 import 'package:boilerplate/utils/routes/routes.dart'; // Konfigurasi route aplikasi
+import 'package:boilerplate/core/widgets/custom_popup.dart';
 import 'package:flutter/material.dart'; // Material Design widgets
 import 'package:flutter_localizations/flutter_localizations.dart'; // Dukungan lokal untuk widget Flutter
 import 'package:flutter_mobx/flutter_mobx.dart'; // Observer untuk reaktivitas state management
@@ -39,7 +40,7 @@ class MyApp extends StatelessWidget {
   // Mengambil instance store dari service locator agar tersedia secara global.
   final ThemeStore _themeStore = getIt<ThemeStore>();
   final LanguageStore _languageStore = getIt<LanguageStore>();
-  final UserStore _userStore = getIt<UserStore>();
+  final LoginStore _userStore = getIt<LoginStore>();
 
   MyApp({super.key});
 
@@ -52,18 +53,21 @@ class MyApp extends StatelessWidget {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           title: Strings.appName,
+          navigatorKey: globalNavigatorKey,
           // Konfigurasi tema berdasarkan nilai darkMode dari ThemeStore
-          theme: _themeStore.darkMode
-              ? AppThemeData.darkThemeData
-              : AppThemeData.lightThemeData,
+          theme:
+              _themeStore.darkMode
+                  ? AppThemeData.darkThemeData
+                  : AppThemeData.lightThemeData,
           // Mendefinisikan route yang dikelola secara terpusat
           routes: Routes.routes,
           // Menetapkan locale aplikasi berdasarkan pengaturan dari LanguageStore
           locale: Locale(_languageStore.locale),
           // Mendukung beberapa bahasa yang telah didefinisikan di LanguageStore
-          supportedLocales: _languageStore.supportedLanguages
-              .map((language) => Locale(language.locale, language.code))
-              .toList(),
+          supportedLocales:
+              _languageStore.supportedLanguages
+                  .map((language) => Locale(language.locale, language.code))
+                  .toList(),
           // Delegasi untuk lokal dan penerjemahan aplikasi
           localizationsDelegates: const [
             // Memuat terjemahan dari file JSON atau sumber lokal lainnya

@@ -33,6 +33,26 @@ class SharedPreferenceHelper {
     return _sharedPreference.setBool(Preferences.is_logged_in, value);
   }
 
+  // User ID
+  Future<int?> get userId {
+    return Future.value(_sharedPreference.getInt(Preferences.user_id));
+  }
+
+  Future<bool> saveUserId(int id) {
+    return _sharedPreference.setInt(Preferences.user_id, id);
+  }
+
+  Future<bool> removeUserId() {
+    return _sharedPreference.remove(Preferences.user_id);
+  }
+
+  // Logout - clear all auth data
+  Future<void> logout() async {
+    await _sharedPreference.setBool(Preferences.is_logged_in, false);
+    await _sharedPreference.remove(Preferences.auth_token);
+    await _sharedPreference.remove(Preferences.user_id);
+  }
+
   // Theme:------------------------------------------------------
   bool get isDarkMode {
     return _sharedPreference.getBool(Preferences.is_dark_mode) ?? false;

@@ -23,6 +23,7 @@ library;
 import 'dart:async';
 
 import 'package:boilerplate/data/local/datasources/post/post_datasource.dart'; // Data source untuk akses data post dari penyimpanan lokal
+import 'package:boilerplate/data/local/datasources/user/user_datasource.dart';
 import 'package:boilerplate/data/network/apis/posts/post_api.dart'; // API untuk mengakses endpoint post dari jaringan
 import 'package:boilerplate/data/repository/post/post_repository_impl.dart'; // Implementasi repository post
 import 'package:boilerplate/data/repository/setting/setting_repository_impl.dart'; // Implementasi repository setting
@@ -63,7 +64,10 @@ class RepositoryModule {
 
     // Mendaftarkan UserRepository dengan implementasi yang membutuhkan SharedPreferenceHelper.
     getIt.registerSingleton<UserRepository>(
-      UserRepositoryImpl(getIt<SharedPreferenceHelper>()),
+      UserRepositoryImpl(
+        getIt<SharedPreferenceHelper>(),
+        getIt<UserDataSource>(),
+      ),
     );
 
     // Mendaftarkan PostRepository dengan implementasi yang membutuhkan PostApi dan PostDataSource.

@@ -12,4 +12,7 @@ class Endpoints {
 
   // booking endpoints
   static const String getPosts = "$baseUrl/posts";
+  static const String login = "$baseUrl/login";
+  static const String register = "$baseUrl/register";
+  static const String getUser = "$baseUrl/getUser";
 }

@@ -34,6 +34,7 @@ import 'package:boilerplate/domain/usecase/post/insert_post_usecase.dart'; // Us
 import 'package:boilerplate/domain/usecase/post/udpate_post_usecase.dart'; // Use case untuk memperbarui post yang sudah ada
 import 'package:boilerplate/domain/usecase/user/is_logged_in_usecase.dart'; // Use case untuk memeriksa status login pengguna
 import 'package:boilerplate/domain/usecase/user/login_usecase.dart'; // Use case untuk menangani proses login
+import 'package:boilerplate/domain/usecase/user/register_usecase.dart'; // Use case untuk menangani proses login
 import 'package:boilerplate/domain/usecase/user/save_login_in_status_usecase.dart'; // Use case untuk menyimpan status login
 
 import '../../../di/service_locator.dart'; // Instance service locator (GetIt)
@@ -71,7 +72,9 @@ class UseCaseModule {
     getIt.registerSingleton<LoginUseCase>(
       LoginUseCase(getIt<UserRepository>()),
     );
-
+    getIt.registerSingleton<RegisterUseCase>(
+      RegisterUseCase(getIt<UserRepository>()),
+    );
     // Post Use Cases:----------------------------------------------------------
     // Mendaftarkan use case untuk mengambil daftar post.
     getIt.registerSingleton<GetPostUseCase>(
