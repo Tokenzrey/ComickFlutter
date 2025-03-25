@@ -71,6 +71,22 @@ mixin _$PostStore on _PostStore, Store {
     return _$getPostsAsyncAction.run(() => super.getPosts());
   }
 
+  late final _$addPostAsyncAction =
+      AsyncAction('_PostStore.addPost', context: context);
+
+  @override
+  Future<bool> addPost(String title, String body) {
+    return _$addPostAsyncAction.run(() => super.addPost(title, body));
+  }
+
+  late final _$deletePostAsyncAction =
+      AsyncAction('_PostStore.deletePost', context: context);
+
+  @override
+  Future<bool> deletePost(int index) {
+    return _$deletePostAsyncAction.run(() => super.deletePost(index));
+  }
+
   @override
   String toString() {
     return '''

@@ -40,6 +40,38 @@ mixin _$RegisterStore on _RegisterStore, Store {
     });
   }
 
+  late final _$loadingAtom =
+      Atom(name: '_RegisterStore.loading', context: context);
+
+  @override
+  bool get loading {
+    _$loadingAtom.reportRead();
+    return super.loading;
+  }
+
+  @override
+  set loading(bool value) {
+    _$loadingAtom.reportWrite(value, super.loading, () {
+      super.loading = value;
+    });
+  }
+
+  late final _$loginFutureAtom =
+      Atom(name: '_RegisterStore.loginFuture', context: context);
+
+  @override
+  ObservableFuture<User?> get loginFuture {
+    _$loginFutureAtom.reportRead();
+    return super.loginFuture;
+  }
+
+  @override
+  set loginFuture(ObservableFuture<User?> value) {
+    _$loginFutureAtom.reportWrite(value, super.loginFuture, () {
+      super.loginFuture = value;
+    });
+  }
+
   late final _$registerFutureAtom =
       Atom(name: '_RegisterStore.registerFuture', context: context);
 
@@ -113,6 +145,8 @@ mixin _$RegisterStore on _RegisterStore, Store {
   String toString() {
     return '''
 success: ${success},
+loading: ${loading},
+loginFuture: ${loginFuture},
 registerFuture: ${registerFuture},
 canRegister: ${canRegister},
 isLoading: ${isLoading}
