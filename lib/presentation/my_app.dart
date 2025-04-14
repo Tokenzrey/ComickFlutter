@@ -23,8 +23,8 @@ import 'package:boilerplate/constants/strings.dart'; // Konstanta string, sepert
 import 'package:boilerplate/presentation/home/home.dart'; // Halaman HomeScreen
 import 'package:boilerplate/presentation/home/store/language/language_store.dart'; // Store pengaturan bahasa
 import 'package:boilerplate/presentation/home/store/theme/theme_store.dart'; // Store pengaturan tema
-import 'package:boilerplate/presentation/login/login.dart'; // Halaman LoginScreen
-import 'package:boilerplate/presentation/login/store/login_store.dart'; // Store untuk proses login (jika diperlukan)
+// import 'package:boilerplate/presentation/login/login.dart'; // Halaman LoginScreen
+// import 'package:boilerplate/presentation/login/store/login_store.dart'; // Store untuk proses login (jika diperlukan)
 import 'package:boilerplate/utils/locale/app_localization.dart'; // Konfigurasi lokal dan penerjemahan
 import 'package:boilerplate/utils/routes/routes.dart'; // Konfigurasi route aplikasi
 import 'package:boilerplate/core/widgets/custom_popup.dart';
@@ -40,7 +40,7 @@ class MyApp extends StatelessWidget {
   // Mengambil instance store dari service locator agar tersedia secara global.
   final ThemeStore _themeStore = getIt<ThemeStore>();
   final LanguageStore _languageStore = getIt<LanguageStore>();
-  final LoginStore _userStore = getIt<LoginStore>();
+  // final LoginStore _userStore = getIt<LoginStore>();
 
   MyApp({super.key});
 
@@ -51,38 +51,35 @@ class MyApp extends StatelessWidget {
     return Observer(
       builder: (context) {
         return MaterialApp(
-          debugShowCheckedModeBanner: false,
-          title: Strings.appName,
-          navigatorKey: globalNavigatorKey,
-          // Konfigurasi tema berdasarkan nilai darkMode dari ThemeStore
-          theme:
-              _themeStore.darkMode
-                  ? AppThemeData.darkThemeData
-                  : AppThemeData.lightThemeData,
-          // Mendefinisikan route yang dikelola secara terpusat
-          routes: Routes.routes,
-          // Menetapkan locale aplikasi berdasarkan pengaturan dari LanguageStore
-          locale: Locale(_languageStore.locale),
-          // Mendukung beberapa bahasa yang telah didefinisikan di LanguageStore
-          supportedLocales:
-              _languageStore.supportedLanguages
-                  .map((language) => Locale(language.locale, language.code))
-                  .toList(),
-          // Delegasi untuk lokal dan penerjemahan aplikasi
-          localizationsDelegates: const [
-            // Memuat terjemahan dari file JSON atau sumber lokal lainnya
-            AppLocalizations.delegate,
-            // Lokalisasi dasar untuk widget Material
-            GlobalMaterialLocalizations.delegate,
-            // Lokalisasi untuk arah penulisan (LTR/RTL)
-            GlobalWidgetsLocalizations.delegate,
-            // Lokalisasi dasar untuk widget Cupertino
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          // Menentukan tampilan awal: HomeScreen jika pengguna sudah login, atau LoginScreen jika belum
-          home:
-              _userStore.isLoggedIn ? const HomeScreen() : const LoginScreen(),
-        );
+            debugShowCheckedModeBanner: false,
+            title: Strings.appName,
+            navigatorKey: globalNavigatorKey,
+            // Konfigurasi tema berdasarkan nilai darkMode dari ThemeStore
+            theme: _themeStore.darkMode
+                ? AppThemeData.darkThemeData
+                : AppThemeData.lightThemeData,
+            // Mendefinisikan route yang dikelola secara terpusat
+            routes: Routes.routes,
+            onGenerateRoute: Routes.onGenerateRoute,
+            // Menetapkan locale aplikasi berdasarkan pengaturan dari LanguageStore
+            locale: Locale(_languageStore.locale),
+            // Mendukung beberapa bahasa yang telah didefinisikan di LanguageStore
+            supportedLocales: _languageStore.supportedLanguages
+                .map((language) => Locale(language.locale, language.code))
+                .toList(),
+            // Delegasi untuk lokal dan penerjemahan aplikasi
+            localizationsDelegates: const [
+              // Memuat terjemahan dari file JSON atau sumber lokal lainnya
+              AppLocalizations.delegate,
+              // Lokalisasi dasar untuk widget Material
+              GlobalMaterialLocalizations.delegate,
+              // Lokalisasi untuk arah penulisan (LTR/RTL)
+              GlobalWidgetsLocalizations.delegate,
+              // Lokalisasi dasar untuk widget Cupertino
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            // Menentukan tampilan awal: HomeScreen jika pengguna sudah login, atau LoginScreen jika belum
+            home: const HomeScreen());
       },
     );
   }

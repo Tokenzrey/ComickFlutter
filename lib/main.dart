@@ -16,6 +16,9 @@ import 'package:boilerplate/di/service_locator.dart'; // Dependency injection co
 import 'package:boilerplate/presentation/my_app.dart'; // Widget utama aplikasi
 import 'package:flutter/material.dart'; // Material design widgets
 import 'package:flutter/services.dart'; // Untuk mengatur orientasi layar dan pengaturan sistem lainnya
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:boilerplate/data/models/comick_model.dart';
 
 /// Fungsi utama (entry point) aplikasi.
 ///
@@ -31,6 +34,14 @@ Future<void> main() async {
 
   // Konfigurasikan dependency injection agar seluruh layanan dan dependensi dapat diakses secara global.
   await ServiceLocator.configureDependencies();
+
+  // Initialize Hive
+  final appDocumentDir = await getApplicationDocumentsDirectory();
+  await Hive.initFlutter(appDocumentDir.path);
+
+  // Register Adapters
+  Hive.registerAdapter(ComicModelAdapter());
+  Hive.registerAdapter(ReadingHistoryModelAdapter());
 
   // Jalankan aplikasi dengan widget utama [MyApp].
   ErrorWidget.builder = (FlutterErrorDetails details) {

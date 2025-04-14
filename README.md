@@ -43,6 +43,418 @@ or watch command in order to keep the source code synced automatically:
 flutter packages pub run build_runner watch
 ```
 
+## Tahapan pemrograman Hive
+
+**Tujuan**: Menyimpan data komik yang di-_follow_ dan riwayat baca (history) secara **lokal** menggunakan **Hive**.
+
+---
+
+#### 1\. Menambahkan Dependensi pada `pubspec.yaml`
+
+`dependencies: flutter: sdk: flutter hive: ^2.2.3 hive_flutter: ^1.1.0 path_provider: ^2.1.1 dev_dependencies: flutter_test: sdk: flutter hive_generator: ^2.0.1 build_runner: ^2.4.6`
+
+- **hive**: package utama Hive.
+- **hive_flutter**: integrasi Hive dengan Flutter (untuk inisialisasi).
+- **path_provider**: mengetahui direktori penyimpanan di perangkat (Android/iOS).
+
+**dev_dependencies**:
+
+- **hive_generator** & **build_runner**: untuk menghasilkan _adapter_ otomatis.
+
+Setelah menambahkan, jalankan:
+
+`flutter pub get`
+
+---
+
+#### 2\. Membuat Model & Adapter Hive
+
+Buat file misalnya `lib/data/models/comic_model.dart` yang berisi definisi model:
+
+`import 'package:hive/hive.dart';
+
+part 'comic_model.g.dart';
+
+@HiveType(typeId: 0)
+class ComicModel extends HiveObject {
+@HiveField(0)
+late String slug;
+
+@HiveField(1)
+late String name;
+
+@HiveField(2)
+late String imageUrl;
+
+@HiveField(3)
+String? description;
+
+ComicModel({
+required this.slug,
+required this.name,
+required this.imageUrl,
+this.description,
+});
+}
+
+@HiveType(typeId: 1)
+class ReadingHistoryModel extends HiveObject {
+@HiveField(0)
+late String comicSlug;
+
+@HiveField(1)
+late String comicName;
+
+@HiveField(2)
+late String imageUrl;
+
+@HiveField(3)
+late String chapterId;
+
+@HiveField(4)
+late String chapterTitle;
+
+@HiveField(5)
+late DateTime lastReadDate;
+
+@HiveField(6)
+late int lastReadPage;
+
+@HiveField(7)
+late int readingProgress; // persentase 0-100
+
+ReadingHistoryModel({
+required this.comicSlug,
+required this.comicName,
+required this.imageUrl,
+required this.chapterId,
+required this.chapterTitle,
+required this.lastReadDate,
+this.lastReadPage = 0,
+this.readingProgress = 0,
+});
+}`
+
+Perhatikan:
+
+- Masing-masing class diberi **@HiveType** dengan **typeId** berbeda.
+- Properti diberi **@HiveField(nomor)** untuk menandai field di Hive.
+
+##### Menghasilkan Adapter
+
+Setelah membuat file di atas, buka terminal:
+
+`flutter pub run build_runner build`
+
+Perintah tersebut akan menghasilkan file `comic_model.g.dart` (adapter) di folder yang sama.
+
+---
+
+#### 3\. Inisialisasi Hive di `main.dart`
+
+Tambahkan di bagian awal `main()`:
+
+`import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:boilerplate/data/models/comic_model.dart';
+
+Future<void> main() async {
+WidgetsFlutterBinding.ensureInitialized();
+
+// Inisialisasi Hive
+final appDocumentDir = await getApplicationDocumentsDirectory();
+await Hive.initFlutter(appDocumentDir.path);
+
+// Registrasi Adapter
+Hive.registerAdapter(ComicModelAdapter());
+Hive.registerAdapter(ReadingHistoryModelAdapter());
+
+runApp(const MyApp());
+}`
+
+- **Hive.initFlutter(...)** mempersiapkan direktori lokal untuk database.
+- **Hive.registerAdapter(...)** memastikan class adapter terbaca.
+
+---
+
+#### 4\. Membuat Repository (Data Access)
+
+Buat sebuah repository misalnya `lib/data/repositories/comic_repository.dart`:
+
+`import 'package:hive/hive.dart';
+import 'package:boilerplate/data/models/comic_model.dart';
+
+class ComicRepository {
+static const String \_followedComicsBox = 'followedComics';
+static const String \_readingHistoryBox = 'readingHistory';
+
+// -------- Followed Comics --------
+Future<Box<ComicModel>> \_getFollowedComicsBox() async {
+return await Hive.openBox<ComicModel>(\_followedComicsBox);
+}
+
+Future<List<ComicModel>> getAllFollowedComics() async {
+final box = await \_getFollowedComicsBox();
+return box.values.toList();
+}
+
+Future<void> followComic(ComicModel comic) async {
+final box = await \_getFollowedComicsBox();
+await box.put(comic.slug, comic);
+}
+
+Future<void> unfollowComic(String comicSlug) async {
+final box = await \_getFollowedComicsBox();
+await box.delete(comicSlug);
+}
+
+Future<bool> isComicFollowed(String comicSlug) async {
+final box = await \_getFollowedComicsBox();
+return box.containsKey(comicSlug);
+}
+
+// -------- Reading History --------
+Future<Box<ReadingHistoryModel>> \_getReadingHistoryBox() async {
+return await Hive.openBox<ReadingHistoryModel>(\_readingHistoryBox);
+}
+
+Future<List<ReadingHistoryModel>> getReadingHistory() async {
+final box = await \_getReadingHistoryBox();
+// Sort by lastReadDate descending
+final list = box.values.toList();
+list.sort((a, b) => b.lastReadDate.compareTo(a.lastReadDate));
+return list;
+}
+
+Future<void> saveReadingProgress(ReadingHistoryModel history) async {
+final box = await _getReadingHistoryBox();
+final key = '${history.comicSlug}_${history.chapterId}';
+await box.put(key, history);
+}
+
+Future<ReadingHistoryModel?> getChapterProgress(String comicSlug, String chapterId) async {
+final box = await _getReadingHistoryBox();
+final key = '${comicSlug}_$chapterId';
+return box.get(key);
+}
+
+Future<void> deleteReadingHistory(String comicSlug, String chapterId) async {
+final box = await _getReadingHistoryBox();
+final key = '${comicSlug}_$chapterId';
+await box.delete(key);
+}
+
+Future<void> clearAllReadingHistory() async {
+final box = await \_getReadingHistoryBox();
+await box.clear();
+}
+}`
+
+Dengan repository ini, Anda dapat memanggil fungsi `followComic(...)`, `getReadingHistory()`, dsb. untuk memanipulasi data di Hive.
+
+---
+
+#### 5\. Menggunakan Repository di Fitur **FollowedComics**
+
+Contoh di `FollowedComicsSection`:
+
+`import 'package:flutter/material.dart';
+import 'package:boilerplate/data/models/comic_model.dart';
+import 'package:boilerplate/data/repositories/comic_repository.dart';
+import 'package:boilerplate/presentation/home/components/comic_cards.dart';
+
+class FollowedComicsSection extends StatefulWidget {
+const FollowedComicsSection({super.key});
+
+@override
+State<FollowedComicsSection> createState() => \_FollowedComicsSectionState();
+}
+
+class \_FollowedComicsSectionState extends State<FollowedComicsSection> {
+final ComicRepository \_repository = ComicRepository();
+List<ComicModel> \_comics = [];
+bool \_isLoading = true;
+
+@override
+void initState() {
+super.initState();
+\_loadFollowedComics();
+}
+
+Future<void> \_loadFollowedComics() async {
+setState(() => \_isLoading = true);
+try {
+\_comics = await \_repository.getAllFollowedComics();
+} catch (e) {
+debugPrint("Error: $e");
+} finally {
+setState(() => \_isLoading = false);
+}
+}
+
+Future<void> \_unfollowComic(ComicModel comic) async {
+await \_repository.unfollowComic(comic.slug);
+\_loadFollowedComics();
+}
+
+@override
+Widget build(BuildContext context) {
+return Column(
+crossAxisAlignment: CrossAxisAlignment.start,
+children: [
+const Padding(
+padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+child: Text("Followed Comics", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+),
+if (\_isLoading)
+const SizedBox(height: 200, child: Center(child: CircularProgressIndicator()))
+else if (\_comics.isEmpty)
+const SizedBox(height: 200, child: Center(child: Text("No Followed Comics")))
+else
+SizedBox(
+height: 200,
+child: ListView.builder(
+scrollDirection: Axis.horizontal,
+itemCount: \_comics.length,
+itemBuilder: (context, index) {
+final comic = \_comics[index];
+return Padding(
+padding: const EdgeInsets.all(8.0),
+child: GestureDetector(
+onLongPress: () => \_unfollowComic(comic),
+child: SimpleComicCard(comic: comic),
+),
+);
+},
+),
+),
+],
+);
+}
+}`
+
+---
+
+#### 6\. Menggunakan Repository di Fitur **ReadingHistory**
+
+Contoh di `HistorySection`:
+
+`import 'package:flutter/material.dart';
+import 'package:boilerplate/data/models/comic_model.dart';
+import 'package:boilerplate/data/repositories/comic_repository.dart';
+import 'package:boilerplate/presentation/home/components/comic_cards.dart';
+
+class HistorySection extends StatefulWidget {
+const HistorySection({super.key});
+
+@override
+State<HistorySection> createState() => \_HistorySectionState();
+}
+
+class \_HistorySectionState extends State<HistorySection> {
+final ComicRepository \_repository = ComicRepository();
+List<ReadingHistoryModel> \_histories = [];
+bool \_isLoading = true;
+
+@override
+void initState() {
+super.initState();
+\_loadHistories();
+}
+
+Future<void> \_loadHistories() async {
+setState(() => \_isLoading = true);
+try {
+\_histories = await \_repository.getReadingHistory();
+} catch (e) {
+debugPrint("Error loading history: $e");
+} finally {
+setState(() => \_isLoading = false);
+}
+}
+
+Future<void> \_removeHistory(ReadingHistoryModel item) async {
+await \_repository.deleteReadingHistory(item.comicSlug, item.chapterId);
+\_loadHistories();
+}
+
+@override
+Widget build(BuildContext context) {
+return Column(
+crossAxisAlignment: CrossAxisAlignment.start,
+children: [
+const Padding(
+padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+child: Text("History", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+),
+if (\_isLoading)
+const SizedBox(height: 200, child: Center(child: CircularProgressIndicator()))
+else if (\_histories.isEmpty)
+const SizedBox(height: 200, child: Center(child: Text("No History")))
+else
+SizedBox(
+height: 200,
+child: ListView.builder(
+scrollDirection: Axis.horizontal,
+itemCount: \_histories.length,
+itemBuilder: (context, index) {
+final history = \_histories[index];
+return Padding(
+padding: const EdgeInsets.all(8.0),
+child: GestureDetector(
+onLongPress: () => \_removeHistory(history),
+child: HistoryComicCard(history: history),
+),
+);
+},
+),
+),
+],
+);
+}
+}`
+
+---
+
+#### 7\. Menyimpan Progress Baca
+
+Misalnya, di bagian saat user membaca komik, Anda bisa memanggil:
+
+`Future<void> \_saveProgress(String comicSlug, String comicName, String imageUrl,
+String chapterId, String chapterTitle, int currentPage, int totalPages) async {
+
+final progress = totalPages > 0 ? ((currentPage+1)\*100 ~/ totalPages) : 0;
+final readingHistory = ReadingHistoryModel(
+comicSlug: comicSlug,
+comicName: comicName,
+imageUrl: imageUrl,
+chapterId: chapterId,
+chapterTitle: chapterTitle,
+lastReadDate: DateTime.now(),
+lastReadPage: currentPage,
+readingProgress: progress,
+);
+await ComicRepository().saveReadingProgress(readingHistory);
+}`
+
+---
+
+#### 8\. Tips & Best Practice
+
+- **Jangan Lupa `dispose()`**:  
+  Jika Anda membuka banyak Box, usahakan menutupnya saat tidak diperlukan atau saat aplikasi menutup, agar terhindar dari kebocoran.
+- **Perhatikan Tipe Data**:  
+  Hive mendukung tipe dasar, list, map, dan objek dengan adapter. Jika menyimpan custom object, pastikan _adapter_ sudah ter-_generate_.
+- **Migrasi**:  
+  Jika menambah/kurangi field di model, ubah `typeId`, update adapter, dan gunakan `Hive field` dengan penomoran rapi. Hindari bentrok _typeId_ antar model.
+- **Encryption (Opsional)**:  
+  Anda dapat menggunakan **hive_encrypt** atau manual `HiveAesCipher` jika data perlu terenkripsi.
+- **Perform Pemanggilan**:  
+  Buka box Hive sekali di `Repository` (misalnya `_getFollowedComicsBox()` memanggil `Hive.openBox(...)`) – setelah dibuka, box siap digunakan. Gunakan put/get/clear/values dsb.
+
+---
+
 ## Hide Generated Files
 
 In-order to hide generated files, navigate to `Android Studio` -> `Preferences` -> `Editor` -> `File Types` and paste the below lines under `ignore files and folders` section:
