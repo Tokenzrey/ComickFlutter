@@ -177,7 +177,7 @@ class DetailedComicCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      height: 300,
+      height: 350,
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         border: Border.all(color: Colors.grey.shade300),
