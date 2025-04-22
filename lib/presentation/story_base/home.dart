@@ -90,10 +90,40 @@ class _StoryBaseState extends State<StoryBase> {
                 padding: const EdgeInsets.all(8.0),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: <Widget>[
-                    const Text('This is a typical dialog.'),
-                    const SizedBox(height: 15),
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Column(
+                      children: [
+                        const Text(
+                          'Create Story',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          decoration: InputDecoration(
+                            labelText: 'Image Url',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          decoration: InputDecoration(
+                            labelText: 'Title',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          decoration: InputDecoration(
+                            labelText: 'Story',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ],
+                    ),
                     TextButton(
                       onPressed: () {
                         Navigator.pop(context);
