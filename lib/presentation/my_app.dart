@@ -18,31 +18,34 @@
 /// - `flutter_mobx`: Untuk reaktivitas state management dengan MobX.
 library;
 
-import 'package:boilerplate/constants/app_theme.dart'; // Konfigurasi tema aplikasi (light dan dark mode)
+// import 'package:boilerplate/constants/app_theme.dart'; // Konfigurasi tema aplikasi (light dan dark mode)
 import 'package:boilerplate/constants/strings.dart'; // Konstanta string, seperti nama aplikasi
-import 'package:boilerplate/presentation/home/home.dart'; // Halaman HomeScreen
-import 'package:boilerplate/presentation/home/store/language/language_store.dart'; // Store pengaturan bahasa
-import 'package:boilerplate/presentation/home/store/theme/theme_store.dart'; // Store pengaturan tema
+// import 'package:boilerplate/presentation/home/home.dart'; // Halaman HomeScreen
+// import 'package:boilerplate/presentation/home/store/language/language_store.dart'; // Store pengaturan bahasa
+// import 'package:boilerplate/presentation/home/store/theme/theme_store.dart'; // Store pengaturan tema
+import 'package:boilerplate/presentation/story_base/home.dart';
 // import 'package:boilerplate/presentation/login/login.dart'; // Halaman LoginScreen
 // import 'package:boilerplate/presentation/login/store/login_store.dart'; // Store untuk proses login (jika diperlukan)
 import 'package:boilerplate/utils/locale/app_localization.dart'; // Konfigurasi lokal dan penerjemahan
 import 'package:boilerplate/utils/routes/routes.dart'; // Konfigurasi route aplikasi
-import 'package:boilerplate/core/widgets/custom_popup.dart';
 import 'package:flutter/material.dart'; // Material Design widgets
 import 'package:flutter_localizations/flutter_localizations.dart'; // Dukungan lokal untuk widget Flutter
 import 'package:flutter_mobx/flutter_mobx.dart'; // Observer untuk reaktivitas state management
+// import 'package:get_it/get_it.dart';
 
-import '../di/service_locator.dart'; // Mengakses dependency injection dengan GetIt
+// import '../di/service_locator.dart'; // Mengakses dependency injection dengan GetIt
 
 /// Widget [MyApp] adalah root widget aplikasi yang menyediakan konfigurasi global seperti tema,
 /// bahasa, route, dan tampilan awal berdasarkan status autentikasi pengguna.
 class MyApp extends StatelessWidget {
   // Mengambil instance store dari service locator agar tersedia secara global.
-  final ThemeStore _themeStore = getIt<ThemeStore>();
-  final LanguageStore _languageStore = getIt<LanguageStore>();
+  // final ThemeStore _themeStore = getIt<ThemeStore>();
+  // final LanguageStore _languageStore = getIt<LanguageStore>();
+  // final GlobalKey<NavigatorState> _navigatorKey = GetIt.instance<GlobalKey<NavigatorState>>();
+
   // final LoginStore _userStore = getIt<LoginStore>();
 
-  MyApp({super.key});
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -53,20 +56,20 @@ class MyApp extends StatelessWidget {
         return MaterialApp(
             debugShowCheckedModeBanner: false,
             title: Strings.appName,
-            navigatorKey: globalNavigatorKey,
+            // navigatorKey: _navigatorKey,
             // Konfigurasi tema berdasarkan nilai darkMode dari ThemeStore
-            theme: _themeStore.darkMode
-                ? AppThemeData.darkThemeData
-                : AppThemeData.lightThemeData,
+            // theme: _themeStore.darkMode
+            //     ? AppThemeData.darkThemeData
+            //     : AppThemeData.lightThemeData,
             // Mendefinisikan route yang dikelola secara terpusat
             routes: Routes.routes,
             onGenerateRoute: Routes.onGenerateRoute,
             // Menetapkan locale aplikasi berdasarkan pengaturan dari LanguageStore
-            locale: Locale(_languageStore.locale),
-            // Mendukung beberapa bahasa yang telah didefinisikan di LanguageStore
-            supportedLocales: _languageStore.supportedLanguages
-                .map((language) => Locale(language.locale, language.code))
-                .toList(),
+            // locale: Locale(_languageStore.locale),
+            // // Mendukung beberapa bahasa yang telah didefinisikan di LanguageStore
+            // supportedLocales: _languageStore.supportedLanguages
+            //     .map((language) => Locale(language.locale, language.code))
+            //     .toList(),
             // Delegasi untuk lokal dan penerjemahan aplikasi
             localizationsDelegates: const [
               // Memuat terjemahan dari file JSON atau sumber lokal lainnya
@@ -79,7 +82,7 @@ class MyApp extends StatelessWidget {
               GlobalCupertinoLocalizations.delegate,
             ],
             // Menentukan tampilan awal: HomeScreen jika pengguna sudah login, atau LoginScreen jika belum
-            home: const HomeScreen());
+            home: const StoryBase());
       },
     );
   }

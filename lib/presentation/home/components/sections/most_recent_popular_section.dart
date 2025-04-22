@@ -1,11 +1,13 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
 import 'package:boilerplate/presentation/home/models/comic.dart';
 import 'package:boilerplate/presentation/home/components/comic_cards.dart';
-import 'package:flutter/material.dart';
-import 'package:boilerplate/utils/dio/webview_api_service.dart';
+import 'package:boilerplate/data/repository/manga/manga_repository.dart';
+import 'package:boilerplate/utils/logger.dart';
 
-/// ===============================
-/// Section 3: Most Recent Popular
-/// ===============================
+/// Section displaying the most popular manga over different time periods
+/// Uses the MangaRepository to fetch data via the /top endpoint
 class MostRecentPopularSection extends StatefulWidget {
   const MostRecentPopularSection({super.key});
 
@@ -15,107 +17,92 @@ class MostRecentPopularSection extends StatefulWidget {
 }
 
 class _MostRecentPopularSectionState extends State<MostRecentPopularSection> {
+  final Logger _logger = Logger().withTag('MostRecentPopularSection');
+  final MangaRepository _mangaRepository = GetIt.instance<MangaRepository>();
+
+  // State variables
   final List<Comic> _comics = [];
   bool _isLoading = false;
   bool _hasError = false;
   String _errorMessage = '';
-  final ScrollController _scrollController = ScrollController();
 
-  // Filter dropdown
-  final List<String> _filterOptions = [
-    '7d',
-    '1m',
-    '3m',
-    '6months',
-    '9m',
-    '1y',
-    '2y'
+  // Filter selection
+  final List<FilterOption> _filterOptions = [
+    FilterOption(label: '7d', days: 7),
+    FilterOption(label: '1m', days: 30),
+    FilterOption(label: '3m', days: 90),
   ];
-  String _selectedFilter = '7d';
+  FilterOption _selectedFilter = FilterOption(label: '7d', days: 7);
 
-  // WebView API Service (Headless)
-  final WebViewApiService _apiService = WebViewApiService();
+  // Stream subscription for cache updates
+  StreamSubscription<Map<String, dynamic>>? _cacheSubscription;
 
   @override
   void initState() {
     super.initState();
-    _initializeAndLoad();
+    // Load data on widget initialization
+    _loadData();
 
-    _scrollController.addListener(() {
-      if (_scrollController.position.atEdge &&
-          _scrollController.position.pixels != 0) {
-        _loadMore();
-      }
+    // Subscribe to cache updates
+    _cacheSubscription = _mangaRepository.onTopCacheUpdated.listen((data) {
+      _logger.debug('Received cache update, refreshing data');
+      if (mounted) _loadData();
     });
   }
 
-  Future<void> _initializeAndLoad() async {
-    setState(() {
-      _isLoading = true;
-      _hasError = false;
-      _errorMessage = '';
-    });
-
-    try {
-      // Inisialisasi headless webview agar Cloudflare ditembus
-      final success = await _apiService.initialize();
-      if (!success) {
-        setState(() {
-          _hasError = true;
-          _errorMessage = "Failed to initialize webview API service.";
-        });
-        return;
-      }
-      // Jika sukses, load data pertama kali
-      await _loadMore();
-    } catch (e) {
-      setState(() {
-        _hasError = true;
-        _errorMessage = "Error initializing: $e";
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
+  @override
+  void dispose() {
+    _cacheSubscription?.cancel();
+    super.dispose();
   }
 
-  Future<void> _loadMore() async {
-    if (_isLoading) return;
+  /// Loads data using the MangaRepository's getRecentPopularManga method
+  Future<void> _loadData() async {
+    if (_isLoading || !mounted) return;
+
     setState(() {
       _isLoading = true;
       _hasError = false;
-      _errorMessage = '';
+      _comics.clear();
     });
 
     try {
-      // Panggil fetchTopComics via webview service
-      final root = await _apiService.fetchTopComics(
-          gender: 1, acceptMatureContent: true);
+      _logger.debug(
+          'Loading recent popular manga for ${_selectedFilter.days} days');
 
-      // Dapatkan rank array
-      final List<dynamic> rankList = root.rank;
-      // Mapping ke model Comic
-      final newComics = rankList.map((item) {
-        String slug = (item["slug"] ?? "").toString();
-        String title = (item["title"] ?? "").toString();
+      // Fetch data using the repository
+      final mangaList = await _mangaRepository.getRecentPopularManga(
+        days: _selectedFilter.days,
+      );
+
+      // Map the response to Comic objects
+      final newComics = mangaList.map((item) {
+        // Extract slug
+        final slug = item["slug"] as String? ?? "";
+
+        // Extract title - try main title first, then fall back to md_titles
+        String title = item["title"] as String? ?? "";
         if (title.isEmpty &&
             item["md_titles"] is List &&
-            item["md_titles"].isNotEmpty) {
-          title = item["md_titles"][0]["title"] ?? "Unknown";
+            (item["md_titles"] as List).isNotEmpty) {
+          title = (item["md_titles"] as List).first["title"] as String? ??
+              "Unknown";
         }
 
-        // Ambil cover
+        // Extract cover image
         String imageUrl = "";
-        if (item["md_covers"] is List && item["md_covers"].isNotEmpty) {
-          final b2key = item["md_covers"][0]["b2key"] ?? "";
+        if (item["md_covers"] is List &&
+            (item["md_covers"] as List).isNotEmpty) {
+          final b2key =
+              (item["md_covers"] as List).first["b2key"] as String? ?? "";
           if (b2key.isNotEmpty) {
             imageUrl = "https://meo.comick.pictures/$b2key";
           }
         }
-        // Tambahkan filter ke name
+
+        // Create the Comic object
         return Comic(
-          name: "$title ($_selectedFilter)",
+          name: title,
           imageUrl: imageUrl,
           slug: slug,
         );
@@ -123,41 +110,50 @@ class _MostRecentPopularSectionState extends State<MostRecentPopularSection> {
 
       setState(() {
         _comics.addAll(newComics);
-        _hasError = false;
-        _errorMessage = '';
       });
-    } catch (e) {
+
+      _logger
+          .info('Successfully loaded ${newComics.length} recent popular manga');
+    } catch (e, stackTrace) {
+      _logger.error('Failed to load recent popular manga: $e',
+          exception: e, stackTrace: stackTrace);
+
       setState(() {
         _hasError = true;
-        _errorMessage = "Failed to load comics: $e";
+        _errorMessage =
+            'Failed to load popular manga: ${e.toString().split('\n').first}';
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Error: $e"),
-          action: SnackBarAction(label: "Retry", onPressed: _loadMore),
-        ),
-      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_errorMessage),
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: "Retry",
+              onPressed: _loadData,
+            ),
+          ),
+        );
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
-  void _onFilterSelected(String filter) {
-    setState(() {
-      _selectedFilter = filter;
-      _comics.clear();
-    });
-    _loadMore();
-  }
+  /// Handles filter selection and reloads data
+  void _onFilterSelected(FilterOption option) {
+    if (option.days == _selectedFilter.days) return;
 
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    // Bersihkan headless webview
-    _apiService.dispose();
-    super.dispose();
+    setState(() {
+      _selectedFilter = option;
+    });
+
+    _loadData();
   }
 
   @override
@@ -165,118 +161,184 @@ class _MostRecentPopularSectionState extends State<MostRecentPopularSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header
+        // Header with title and filter dropdown
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
                 "Most Recent Popular",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(25),
-                  border: Border.all(color: Colors.grey.shade300),
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 2,
-                      offset: const Offset(0, 1),
-                    ),
-                  ],
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _selectedFilter,
-                    icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                    iconSize: 22,
-                    elevation: 8,
-                    isDense: true,
-                    borderRadius: BorderRadius.circular(15),
-                    style: const TextStyle(
-                      color: Colors.blueGrey,
-                      fontWeight: FontWeight.w500,
-                      fontSize: 14,
-                    ),
-                    menuMaxHeight: 300,
-                    items: _filterOptions.map((String filter) {
-                      return DropdownMenuItem<String>(
-                        value: filter,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                          child: Text(filter),
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        _onFilterSelected(value);
-                      }
-                    },
-                  ),
-                ),
-              ),
+              _buildFilterDropdown(),
             ],
           ),
         ),
 
-        // List horizontal
+        // Comics horizontal list
         SizedBox(
           height: 240,
-          child: Stack(
-            children: [
-              if (_comics.isEmpty && !_hasError && _isLoading)
-                // Saat pertama kali load, tampilkan loading
-                const Center(child: CircularProgressIndicator())
-              else if (_comics.isEmpty && _hasError)
-                // Saat error
-                Center(child: Text(_errorMessage))
-              else if (_comics.isEmpty)
-                // Tidak ada data
-                const Center(child: Text("No comics available"))
-              else
-                // Data berhasil di-load
-                ListView.builder(
-                  controller: _scrollController,
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _comics.length,
-                  itemBuilder: (context, index) {
-                    final comic = _comics[index];
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: GestureDetector(
-                        onTap: () {
-                          if (comic.slug != null && comic.slug!.isNotEmpty) {
-                            Navigator.pushNamed(
-                                context, "/comic/${comic.slug}");
-                          }
-                        },
-                        child: SimpleComicCard(comic: comic),
-                      ),
-                    );
-                  },
-                ),
-
-              // Loading indicator di pojok kanan jika sedang load more
-              if (_isLoading && _comics.isNotEmpty)
-                const Positioned(
-                  right: 10,
-                  top: 10,
-                  child: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                ),
-            ],
-          ),
+          child: _buildContentArea(),
         ),
       ],
     );
   }
+
+  /// Builds the filter dropdown widget
+  Widget _buildFilterDropdown() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade300),
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<FilterOption>(
+          value: _selectedFilter,
+          icon: const Icon(Icons.keyboard_arrow_down_rounded),
+          iconSize: 20,
+          elevation: 8,
+          isDense: true,
+          borderRadius: BorderRadius.circular(15),
+          style: TextStyle(
+            color: Theme.of(context).primaryColor,
+            fontWeight: FontWeight.w500,
+            fontSize: 14,
+          ),
+          items: _filterOptions.map((FilterOption option) {
+            return DropdownMenuItem<FilterOption>(
+              value: option,
+              child: Text(option.label),
+            );
+          }).toList(),
+          onChanged: (FilterOption? value) {
+            if (value != null) {
+              _onFilterSelected(value);
+            }
+          },
+        ),
+      ),
+    );
+  }
+
+  /// Builds the content area based on current state
+  Widget _buildContentArea() {
+    // Initial loading state
+    if (_comics.isEmpty && _isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    // Error state
+    if (_comics.isEmpty && _hasError) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 40, color: Colors.red),
+            const SizedBox(height: 8),
+            Text(
+              _errorMessage,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.red),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _loadData,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Empty state
+    if (_comics.isEmpty) {
+      return const Center(
+        child: Text(
+          "No popular manga available",
+          style: TextStyle(fontSize: 16),
+        ),
+      );
+    }
+
+    // Content state
+    return Stack(
+      children: [
+        // Main horizontal list
+        ListView.builder(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          itemCount: _comics.length,
+          itemBuilder: (context, index) {
+            final comic = _comics[index];
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: GestureDetector(
+                onTap: () {
+                  if (comic.slug != null && comic.slug!.isNotEmpty) {
+                    Navigator.pushNamed(
+                      context,
+                      "/comic/${comic.slug}",
+                    );
+                  }
+                },
+                child: SimpleComicCard(comic: comic),
+              ),
+            );
+          },
+        ),
+
+        // Loading indicator overlay
+        if (_isLoading)
+          Positioned(
+            right: 16,
+            top: 16,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Data class for filter options
+class FilterOption {
+  final String label;
+  final int days;
+
+  FilterOption({required this.label, required this.days});
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is FilterOption && other.days == days;
+  }
+
+  @override
+  int get hashCode => days.hashCode;
 }
